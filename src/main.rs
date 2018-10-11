@@ -20,21 +20,6 @@ fn bitmask_to_single_value(bitmask: i32) -> i32 {
 	}
 }
 
-fn single_value_to_bitmask(value: i32) -> i32 {
-	match value {
-		1 => 0x001,
-		2 => 0x002,
-		3 => 0x004,
-		4 => 0x008,
-		5 => 0x010,
-		6 => 0x020,
-		7 => 0x040,
-		8 => 0x080,
-		9 => 0x100,
-		_ => 0,
-	}
-}
-
 struct Board {
 	answered_count: i32,
 	candidates: [[i32; 9]; 9],
@@ -51,7 +36,18 @@ impl Board {
 			row.into_iter().enumerate().map(|(j, value)| {
 				if value > 0 {
 					answered_count += 1;
-					candidates[i][j] = single_value_to_bitmask(value);
+					candidates[i][j] = 	match value {
+						1 => 0x001,
+						2 => 0x002,
+						3 => 0x004,
+						4 => 0x008,
+						5 => 0x010,
+						6 => 0x020,
+						7 => 0x040,
+						8 => 0x080,
+						9 => 0x100,
+						_ => 0x1FF,
+					};
 					fresh_coordinates.push((j, i));
 				}
 
@@ -96,29 +92,52 @@ fn solve_board(board: &mut Board) {
 	while let Some((x, y)) = board.fresh_coordinates.pop() {
 		if board.answered_count >= 81 { break }
 
-		let current_candidates = board.candidates[y][x];
+		// Sole candidate strategies only work with already solved squares
+		if board.values[y][x] != 0 {
+			// Check sole candidate in row
+			for i in 0..9 {
+				if i == x // checking same square against itself
+					|| board.values[y][i] != 0 // checking against already solved square
+				{
+						continue 
+				}
 
-		// Check sole candidate in row
-		for i in 0..9 {
-			if i == x || board.values[y][i] != 0 { continue }
+				let prev_candidates = board.candidates[y][i];
+				board.candidates[y][i] &= !board.candidates[y][x];
 
-			let prev_candidates = board.candidates[y][i];
-			board.candidates[y][i] = prev_candidates & !current_candidates;
+				let new_value = bitmask_to_single_value(board.candidates[y][i]);
 
-			let new_value = bitmask_to_single_value(board.candidates[y][i]);
+				// If it's solved
+				if (new_value > 0) {
+					board.answered_count += 1;
+					board.values[y][i] = new_value;
+				}
 
-			println!("candidates {:x}", board.candidates[y][i]);
-			println!("new_value {:?}", new_value);
-
-			// If it's solved
-			if (new_value > 0) {
-				board.answered_count += 1;
-				board.values[y][i] = new_value;
+				// If the candidates for that given block changed, then we want to check around it as well
+				if board.candidates[y][i] != prev_candidates {
+					board.fresh_coordinates.push((i, y))
+				}
 			}
 
-			// If the candidates for that given block changed, then we want to check around it as well
-			if board.candidates[y][i] != prev_candidates {
-				board.fresh_coordinates.push((i, y))
+			// Check sole candidate in column
+			for i in 0..9 {
+				if i == y || board.values[i][x] != 0 { continue }
+
+				let prev_candidates = board.candidates[i][x];
+				board.candidates[i][x] &= prev_candidates & !board.candidates[y][x];
+
+				let new_value = bitmask_to_single_value(board.candidates[i][x]);
+
+				// If it's solved
+				if (new_value > 0) {
+					board.answered_count += 1;
+					board.values[i][x] = new_value;
+				}
+
+				// If the candidates for that given block changed, then we want to check around it as well
+				if board.candidates[i][x] != prev_candidates {
+					board.fresh_coordinates.push((x, i))
+				}
 			}
 		}
 	}
@@ -164,7 +183,7 @@ mod test {
 	}
 
 	#[test]
-	fn solves_sole_candidate() {
+	fn solves_sole_candidate_row() {
 		let initial_values = vec![
 			vec![1, 2, 3, 4, 5, 6, 7, 8, 0,],
 			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
@@ -189,6 +208,64 @@ mod test {
 			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
 			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
 			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+		], board.values);
+	}
+
+	#[test]
+	fn solves_sole_candidate_col() {
+		let initial_values = vec![
+			vec![3, 2, 1, 4, 5, 6, 7, 8, 9,],
+			vec![0, 0, 2, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 3, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 4, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 5, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 7, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 8, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 9, 0, 0, 0, 0, 0, 0,],
+		];
+		let mut board = Board::new(initial_values);
+		solve_board(&mut board);
+
+		assert_eq!(vec![
+			vec![3, 2, 1, 4, 5, 6, 7, 8, 9,],
+			vec![0, 0, 2, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 3, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 4, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 5, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 6, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 7, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 8, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 9, 0, 0, 0, 0, 0, 0,],
+		], board.values);
+	}
+
+	#[test]
+	fn solves_hardest_puzzle() {
+		let initial_values = vec![
+			vec![8, 0, 0, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 3, 6, 0, 0, 0, 0, 0,],
+			vec![0, 7, 0, 0, 9, 0, 2, 0, 0,],
+			vec![0, 5, 0, 0, 0, 7, 0, 0, 0,],
+			vec![0, 0, 0, 0, 4, 5, 7, 0, 0,],
+			vec![0, 0, 0, 1, 0, 0, 0, 3, 0,],
+			vec![0, 0, 1, 0, 0, 0, 0, 6, 8,],
+			vec![0, 0, 8, 5, 0, 0, 0, 1, 0,],
+			vec![0, 9, 0, 0, 0, 0, 4, 0, 0,],
+		];
+		let mut board = Board::new(initial_values);
+		solve_board(&mut board);
+
+		assert_eq!(vec![
+			vec![8, 1, 2, 7, 5, 3, 6, 4, 9,],
+			vec![9, 4, 3, 6, 8, 2, 1, 7, 5,],
+			vec![6, 7, 5, 4, 9, 1, 2, 8, 3,],
+			vec![1, 5, 4, 2, 3, 7, 8, 9, 6,],
+			vec![3, 6, 9, 8, 4, 5, 7, 2, 1,],
+			vec![2, 8, 7, 1, 6, 9, 5, 3, 4,],
+			vec![5, 2, 1, 9, 7, 4, 3, 6, 8,],
+			vec![4, 3, 8, 5, 2, 6, 9, 1, 7,],
+			vec![7, 9, 6, 3, 1, 8, 4, 5, 2,],
 		], board.values);
 	}
 }
