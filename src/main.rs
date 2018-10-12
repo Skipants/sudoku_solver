@@ -20,6 +20,21 @@ fn bitmask_to_single_value(bitmask: i32) -> i32 {
 	}
 }
 
+fn single_value_to_bitmask(value: i32) -> i32 {
+	match value {
+		1 => 0x001,
+		2 => 0x002,
+		3 => 0x004,
+		4 => 0x008,
+		5 => 0x010,
+		6 => 0x020,
+		7 => 0x040,
+		8 => 0x080,
+		9 => 0x100,
+		_ => 0x1FF,
+	}
+}
+
 struct Board {
 	answered_count: i32,
 	candidates: [[i32; 9]; 9],
@@ -36,18 +51,7 @@ impl Board {
 			row.into_iter().enumerate().map(|(j, value)| {
 				if value > 0 {
 					answered_count += 1;
-					candidates[i][j] = 	match value {
-						1 => 0x001,
-						2 => 0x002,
-						3 => 0x004,
-						4 => 0x008,
-						5 => 0x010,
-						6 => 0x020,
-						7 => 0x040,
-						8 => 0x080,
-						9 => 0x100,
-						_ => 0x1FF,
-					};
+					candidates[i][j] = single_value_to_bitmask(value);
 					fresh_coordinates.push((j, i));
 				}
 
@@ -88,63 +92,44 @@ fn fill_board_from_file(filename: String) -> Result<Board, std::io::Error> {
 	Ok(Board::new(values))
 }
 
+fn sole_candidate_comparison(board: &mut Board, solved_x: usize, solved_y: usize, candidate_x: usize, candidate_y: usize) {
+	if solved_x == candidate_x && solved_y == candidate_y || board.values[candidate_y][candidate_x] > 0 {
+		return
+	}
+
+	let prev_candidates = board.candidates[candidate_y][candidate_x];
+
+	board.candidates[candidate_y][candidate_x] &= !single_value_to_bitmask(board.values[solved_y][solved_x]);
+
+	let new_value = bitmask_to_single_value(board.candidates[candidate_y][candidate_x]);
+
+	// If it's solved
+	if (new_value > 0) {
+		board.answered_count += 1;
+		board.values[candidate_y][candidate_x] = new_value;
+	}
+
+	// If the candidates for that given cell changed, then we want to check around it as well
+	if board.candidates[candidate_y][candidate_x] != prev_candidates {
+		if (!board.fresh_coordinates.contains(&(candidate_x, candidate_y))) {
+			board.fresh_coordinates.push((candidate_x, candidate_y))
+		}
+	}	
+}
+
 fn solve_board(board: &mut Board) {
 	while let Some((x, y)) = board.fresh_coordinates.pop() {
 		if board.answered_count >= 81 { break }
 
 		// Sole candidate strategies only work with already solved squares
 		if board.values[y][x] != 0 {
-			// Check sole candidate in row
+			// Check sole candidates in row and column
 			for i in 0..9 {
-				if i == x // checking same square against itself
-					|| board.values[y][i] != 0 // checking against already solved square
-				{
-						continue 
-				}
-
-				let prev_candidates = board.candidates[y][i];
-				board.candidates[y][i] &= !board.candidates[y][x];
-
-				let new_value = bitmask_to_single_value(board.candidates[y][i]);
-
-				// If it's solved
-				if (new_value > 0) {
-					board.answered_count += 1;
-					board.values[y][i] = new_value;
-				}
-
-				// If the candidates for that given cell changed, then we want to check around it as well
-				if board.candidates[y][i] != prev_candidates {
-					if (!board.fresh_coordinates.contains(&(i, y))) {
-						board.fresh_coordinates.push((i, y))
-					}
-				}
+				sole_candidate_comparison(board, x, y, x, i);
+				sole_candidate_comparison(board, x, y, i, y);
 			}
 
-			// Check sole candidate in column
-			for i in 0..9 {
-				if i == y || board.values[i][x] != 0 { continue }
-
-				let prev_candidates = board.candidates[i][x];
-				board.candidates[i][x] &= prev_candidates & !board.candidates[y][x];
-
-				let new_value = bitmask_to_single_value(board.candidates[i][x]);
-
-				// If it's solved
-				if (new_value > 0) {
-					board.answered_count += 1;
-					board.values[i][x] = new_value;
-				}
-
-				// If the candidates for that given cell changed, then we want to check around it as well
-				if board.candidates[i][x] != prev_candidates {
-					if (!board.fresh_coordinates.contains(&(x, i))) {
-						board.fresh_coordinates.push((x, i))
-					}
-				}
-			}
-
-			// Unique in block
+			// Check sole candidates in block
 			let compute_block_range = |coord: usize| {
 				match coord {
 					0...2 => (0..=2),
@@ -156,25 +141,7 @@ fn solve_board(board: &mut Board) {
 
 			for i in compute_block_range(y) {
 				for j in compute_block_range(x) {
-					if i == y || j == x || board.values[i][j] != 0 { continue }
-
-					let prev_candidates = board.candidates[i][x];
-					board.candidates[i][x] &= prev_candidates & !board.candidates[y][x];
-
-					let new_value = bitmask_to_single_value(board.candidates[i][x]);
-
-					// If it's solved
-					if (new_value > 0) {
-						board.answered_count += 1;
-						board.values[i][x] = new_value;
-					}
-
-					// If the candidates for that given cell changed, then we want to check around it as well
-					if board.candidates[i][x] != prev_candidates {
-						if (!board.fresh_coordinates.contains(&(x, i))) {
-							board.fresh_coordinates.push((x, i))
-						}
-					}
+					sole_candidate_comparison(board, x, y, j, i);
 				}
 			}
 		}
