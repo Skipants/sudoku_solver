@@ -1,0 +1,2 @@
+- Make the fresh coordinates a set
+- Make checking the value happen only after going through all the strategies? Is that possible?

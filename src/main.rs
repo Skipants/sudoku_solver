@@ -113,9 +113,11 @@ fn solve_board(board: &mut Board) {
 					board.values[y][i] = new_value;
 				}
 
-				// If the candidates for that given block changed, then we want to check around it as well
+				// If the candidates for that given cell changed, then we want to check around it as well
 				if board.candidates[y][i] != prev_candidates {
-					board.fresh_coordinates.push((i, y))
+					if (!board.fresh_coordinates.contains(&(i, y))) {
+						board.fresh_coordinates.push((i, y))
+					}
 				}
 			}
 
@@ -134,9 +136,45 @@ fn solve_board(board: &mut Board) {
 					board.values[i][x] = new_value;
 				}
 
-				// If the candidates for that given block changed, then we want to check around it as well
+				// If the candidates for that given cell changed, then we want to check around it as well
 				if board.candidates[i][x] != prev_candidates {
-					board.fresh_coordinates.push((x, i))
+					if (!board.fresh_coordinates.contains(&(x, i))) {
+						board.fresh_coordinates.push((x, i))
+					}
+				}
+			}
+
+			// Unique in block
+			let compute_block_range = |coord: usize| {
+				match coord {
+					0...2 => (0..=2),
+					3...5 => (3..=5),
+					6...8 => (6..=8),
+					_ => panic!("Expected coord value to be within 0-8, but was {:?}", coord),	
+				}
+			};
+
+			for i in compute_block_range(y) {
+				for j in compute_block_range(x) {
+					if i == y || j == x || board.values[i][j] != 0 { continue }
+
+					let prev_candidates = board.candidates[i][x];
+					board.candidates[i][x] &= prev_candidates & !board.candidates[y][x];
+
+					let new_value = bitmask_to_single_value(board.candidates[i][x]);
+
+					// If it's solved
+					if (new_value > 0) {
+						board.answered_count += 1;
+						board.values[i][x] = new_value;
+					}
+
+					// If the candidates for that given cell changed, then we want to check around it as well
+					if board.candidates[i][x] != prev_candidates {
+						if (!board.fresh_coordinates.contains(&(x, i))) {
+							board.fresh_coordinates.push((x, i))
+						}
+					}
 				}
 			}
 		}
@@ -237,6 +275,35 @@ mod test {
 			vec![0, 0, 7, 0, 0, 0, 0, 0, 0,],
 			vec![0, 0, 8, 0, 0, 0, 0, 0, 0,],
 			vec![0, 0, 9, 0, 0, 0, 0, 0, 0,],
+		], board.values);
+	}
+
+	#[test]
+	fn solves_sole_candidate_block() {
+		let initial_values = vec![
+			vec![3, 2, 1, 4, 5, 6, 7, 8, 9,],
+			vec![0, 0, 2, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 3, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 4, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 5, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 6, 0, 0, 0, 0, 0, 0,],
+			vec![0, 5, 7, 0, 0, 0, 0, 0, 0,],
+			vec![1, 6, 8, 0, 0, 0, 0, 0, 0,],
+			vec![2, 3, 9, 0, 0, 0, 0, 0, 0,],
+		];
+		let mut board = Board::new(initial_values);
+		solve_board(&mut board);
+
+		assert_eq!(vec![
+			vec![3, 2, 1, 4, 5, 6, 7, 8, 9,],
+			vec![0, 0, 2, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 3, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 4, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 5, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 6, 0, 0, 0, 0, 0, 0,],
+			vec![4, 5, 7, 0, 0, 0, 0, 0, 0,],
+			vec![1, 6, 8, 0, 0, 0, 0, 0, 0,],
+			vec![2, 3, 9, 0, 0, 0, 0, 0, 0,],
 		], board.values);
 	}
 
