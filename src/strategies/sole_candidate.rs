@@ -38,17 +38,125 @@ pub fn solve(board: &mut Board, x: usize, y: usize) {
 		// Check sole candidates in block
 		let compute_block_range = |coord: usize| {
 			match coord {
-				0...2 => (0..=2),
-				3...5 => (3..=5),
-				6...8 => (6..=8),
+				0...2 => (0..3),
+				3...5 => (3..6),
+				6...8 => (6..9),
 				_ => panic!("Expected coord value to be within 0-8, but was {:?}", coord),	
 			}
 		};
 
 		for i in compute_block_range(y) {
 			for j in compute_block_range(x) {
+				if y == 3 && x == 4 { println!("value: {}, {} {}", board.values[y][x], j, i); }
 				sole_candidate_comparison(board, x, y, j, i);
+				if y == 3 && x == 4 { println!("candidate: {:x}", board.candidates[j][i]); }
 			}
 		}
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	#[test]
+	fn solves_sole_candidate_row() {
+		let initial_values = vec![
+			vec![1, 2, 3, 4, 5, 6, 7, 8, 0,],
+			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+		];
+		let mut board = Board::new(initial_values);
+
+		for i in 0..9 {
+			solve(&mut board, i, 0);
+		}
+
+		assert_eq!([
+			[1, 2, 3, 4, 5, 6, 7, 8, 9,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0,],
+		], board.values);
+	}
+
+	#[test]
+	fn solves_sole_candidate_col() {
+		let initial_values = vec![
+			vec![3, 2, 1, 4, 5, 6, 7, 8, 9,],
+			vec![0, 0, 2, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 3, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 4, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 5, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 7, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 8, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 9, 0, 0, 0, 0, 0, 0,],
+		];
+		let mut board = Board::new(initial_values);
+
+		for i in 0..9 {
+			solve(&mut board, 2, i);
+		}
+
+		assert_eq!([
+			[3, 2, 1, 4, 5, 6, 7, 8, 9,],
+			[0, 0, 2, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 3, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 4, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 5, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 6, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 7, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 8, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 9, 0, 0, 0, 0, 0, 0,],
+		], board.values);
+	}
+
+	#[test]
+	fn solves_sole_candidate_block() {
+		let initial_values = vec![
+			vec![3, 2, 1, 4, 5, 6, 7, 8, 9,],
+			vec![0, 0, 2, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 3, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 4, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 5, 0, 0, 0, 0, 0, 0,],
+			vec![0, 0, 6, 0, 0, 0, 0, 0, 0,],
+			vec![0, 5, 7, 0, 0, 0, 0, 0, 0,],
+			vec![1, 6, 8, 0, 0, 0, 0, 0, 0,],
+			vec![2, 3, 9, 0, 0, 0, 0, 0, 0,],
+		];
+		let mut board = Board::new(initial_values);
+
+		solve(&mut board, 0, 7);
+		solve(&mut board, 0, 8);
+		solve(&mut board, 1, 6);
+		solve(&mut board, 1, 7);
+		solve(&mut board, 1, 8);
+		solve(&mut board, 2, 6);
+		solve(&mut board, 2, 7);
+		solve(&mut board, 2, 8);
+
+		assert_eq!([
+			[3, 2, 1, 4, 5, 6, 7, 8, 9,],
+			[0, 0, 2, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 3, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 4, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 5, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 6, 0, 0, 0, 0, 0, 0,],
+			[4, 5, 7, 0, 0, 0, 0, 0, 0,],
+			[1, 6, 8, 0, 0, 0, 0, 0, 0,],
+			[2, 3, 9, 0, 0, 0, 0, 0, 0,],
+		], board.values);
 	}
 }

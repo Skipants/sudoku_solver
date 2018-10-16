@@ -5,7 +5,7 @@ pub struct Board {
 	pub answered_count: i32,
 	pub candidates: [[i32; 9]; 9],
 	pub fresh_coordinates: Vec<(usize, usize)>,
-	pub values: Vec<Vec<i32>>,
+	pub values: [[i32; 9]; 9],
 }
 
 impl Board {
@@ -13,17 +13,18 @@ impl Board {
 		let mut answered_count = 0;
 		let mut candidates = [[0x01FF; 9]; 9];
 		let mut fresh_coordinates = vec![];
-		let board_values = raw_values.into_iter().enumerate().map(|(i, row)| {
-			row.into_iter().enumerate().map(|(j, value)| {
+		let mut board_values = [[0; 9]; 9];
+
+		for (i, row) in raw_values.into_iter().enumerate() {
+			for (j, value) in row.into_iter().enumerate() {
 				if value > 0 {
 					answered_count += 1;
+					board_values[i][j] = value;
 					candidates[i][j] = sudoku_cell_bitmask::single_value_to_bitmask(value);
 					fresh_coordinates.push((j, i));
 				}
-
-				value
-			}).collect()
-		}).collect();
+			}
+		}
 
 		Board {
 			answered_count: answered_count,
@@ -38,8 +39,9 @@ impl Display for Board {
 	fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
 	    for row in &self.values {
 	    	for value in row {
-	    		write!(f, "{}", value);
+	    		write!(f, "{} ", value);
 	    	}
+	    	writeln!(f);
 	    	writeln!(f);
 	    }
 
