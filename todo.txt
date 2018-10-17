@@ -1,1 +1,10 @@
-- Move tests into new modules
+- Have to streamline pushing to fresh coordinates whenever a candidate changes
+- Easy puzzle doesnt seem to update y:0,x:6 to 9 even though it is a sole candidate
+
+- More refactor
+  - API for board
+    - solve_cell
+    - remove_candidates
+  - Candidate struct?
+    - obfuscates all this crazy bitmask stuff im doing
+    - chaining of candidates

@@ -5,7 +5,9 @@ use std::fs::File;
 use std::io::{ BufReader, BufRead };
 use std::fmt::Display;
 
-mod sudoku_cell_bitmask;
+mod coordinate;
+mod candidates;
+mod cell;
 mod board;
 mod strategies;
 
@@ -23,8 +25,8 @@ fn fill_board_from_file(filename: String) -> Result<Board, std::io::Error> {
 }
 
 fn solve_board(board: &mut Board) {
-	while let Some((x, y)) = board.fresh_coordinates.pop() {
-		if board.answered_count >= 81 { break }
+	while let Some(Coordinate) = board.fresh_coordinates.pop() {
+		if board.is_solved() { break }
 
 		strategies::sole_candidate::solve(board, x, y);
 		strategies::column_row_exclusion::solve(board);
