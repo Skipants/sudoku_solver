@@ -33,8 +33,14 @@ impl<'a> Board<'a> {
 		self.answered_count >= 81
 	}
 
+	pub fn next_candidate(&self) {
+
+	}
+
 	pub fn update_cell(&self, coordinate: Coordinate, cell: Cell) {
 		if self.cells[coordinate.y][coordinate.x].contents == Contents::Value { return }
+
+		// Should run sole candidate here?
 
 		self.cells[coordinate.y][coordinate.x] = cell;
 
